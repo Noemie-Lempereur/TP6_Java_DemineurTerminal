@@ -27,16 +27,31 @@ public class MineSweeper {
                 grid[i][j]=new Cell(i,j);
             }
         }
-        putMines(nbMines);
         this.nbCasesWithoutMines = this.nbCols * this.nbRows - nbMines;
         this.tour=0;
         this.lose=false;
+        print();
+        Scanner sc = new Scanner(System.in);
+        System.out.println("Veuillez rentrer les coordonnées de la case que vous voulez dévoiler (exemple pour la case à la ligne 1 et à la colonne 3 : 1 3");
+        String commande = sc.nextLine();
+        int row = (int) commande.charAt(0)-48;
+        int col = (int) commande.charAt(2)-48;
+        putMines(nbMines,row,col);
+        unveil(row, col);
     }
 
     // returns the String representation of a Cell, depending on its attributes and the debug flags
     public String getCellSymbol(Cell cell){
 
         String symbol = "#";        // default symbol = hidden cell
+
+        if(cell.isThinkMine()){
+            symbol="!";
+        }
+
+        if(cell.isDontKnow()){
+            symbol="?";
+        }
 
         // shows the mine in the cell if the cell is visible or if the showMines flag is on
         if((cell.isVisible() || this.showMines) && cell.isMine()){
@@ -127,53 +142,125 @@ public class MineSweeper {
         return neighbors;
     }
 
-    public void putMines(int nbMines) {
+    public void putMines(int nbMines, int rowS, int colS) {
         Random random = new Random();
-        int k=0;
-        for (int i = 0; i < nbMines; i++) {
-            int row = random.nextInt(nbRows); // ligne aléatoire entre 0 et nbRows
-            int col = random.nextInt(nbCols); // colonne aléatoire entre 0 et nbCols
-            if(!grid[row][col].isMine()) {
-                grid[row][col].setMine(true);
-                k=0;
-                LinkedList<Cell> neighbors = new LinkedList<>();
-                neighbors=getNeighbors(grid[row][col]);
-                for (Cell neighbor:neighbors) {
-                    neighbor.setNbTouchingMines(neighbor.getNbTouchingMines()+1);
-                }
-            }else{
-                if(k<500) {
-                    k++;
-                    i--;
+        if(nbRows*nbCols>nbMines){
+            int nbMinesPosees = 0;
+            while (nbMinesPosees!=nbMines) {
+                int row = random.nextInt(nbRows); // ligne aléatoire entre 0 et nbRows
+                int col = random.nextInt(nbCols); // colonne aléatoire entre 0 et nbCols
+                if (!grid[row][col].isMine() && row != rowS && col != colS) {
+                    grid[row][col].setMine(true);
+                    nbMinesPosees++;
+                    LinkedList<Cell> neighbors = new LinkedList<>();
+                    neighbors = getNeighbors(grid[row][col]);
+                    for (Cell neighbor : neighbors) {
+                        neighbor.setNbTouchingMines(neighbor.getNbTouchingMines() + 1);
+                    }
                 }
             }
         }
     }
 
     public void unveil(int row, int col){
-        grid[row][col].setVisible(true);
-        if(grid[row][col].isMine()==true){
+        if(grid[row][col].isMine()){
+            grid[row][col].setVisible(true);
             System.out.println("Vous avez perdu");
             System.out.println("Voici l'emplacement des mines");
             showMines=true;
             print();
             lose=true;
+        }else{
+            if(grid[row][col].getNbTouchingMines()==0){
+                LinkedList <Cell> cells = new LinkedList<>();
+                cells.add(grid[row][col]);
+                while (cells.size()!=0){
+                    Cell test = cells.poll();
+                    if(getCellSymbol(test).equals("#")||getCellSymbol(test).equals("?")||getCellSymbol(test).equals("!")) {
+                        test.setVisible(true);
+                        tour++;
+                        if (test.getNbTouchingMines() == 0) {
+                            LinkedList<Cell> neighbors = getNeighbors(test);
+                            for (Cell neighbor : neighbors) {
+                                cells.add(neighbor);
+                            }
+                        }
+                    }
+                }
+            }else{
+                grid[row][col].setVisible(true);
+                tour++;
+            }
         }
     }
 
     public void play(){
         while (!lose &&tour<nbCasesWithoutMines) {
-            print();
-            Scanner sc = new Scanner(System.in);
-            System.out.println("Veuillez rentrer les coordonnées de la case que vous voulez dévoiler (exemple pour la case à la ligne 1 et à la colonne 3 : 1 3");
-            String commande = sc.nextLine();
-            int row = (int) commande.charAt(0)-48;
-            int col = (int) commande.charAt(2)-48;
-            unveil(row, col);
-            tour++;
-            if(tour==nbCasesWithoutMines){
-                System.out.println("Vous avez gagné !");
+            try {
+                print();
+                Scanner sc = new Scanner(System.in);
+                System.out.println("Veuillez faire l'une des actions suivantes :");
+                System.out.println("- Dévoiler une case (exemple pour la case à la ligne 1 et à la colonne 3 : \"d 1 3\"");
+                System.out.println("- Marquer une case comme possedant une mine (exemple pour la case à la ligne 1 et à la colonne 3 : \"m 1 3 !\"");
+                System.out.println("- Marquer une case comme inconnue (exemple pour la case à la ligne 1 et à la colonne 3 : \"m 1 3 ?\"");
+                System.out.println("- Enlever les marquages (exemple pour la case à la ligne 1 et à la colonne 3 : \"m 1 3 #\"");
+                System.out.println("- Quitter le jeu \"q\"");
+                String commande = sc.nextLine();
+                String[] arrOfCommand = commande.split(" ");
+                if (arrOfCommand[0].equals("q")) {
+                    return;
+                }
+                int row = Integer.parseInt(arrOfCommand[1]);
+                int col = Integer.parseInt(arrOfCommand[2]);
+                if (arrOfCommand[0].equals("d")) {
+                    unveil(row, col);
+                    if (tour == nbCasesWithoutMines && !lose) {
+                        System.out.println("Vous avez gagné !");
+                        print();
+                    }
+                }
+                if (arrOfCommand[0].equals("m")) {
+                    if (arrOfCommand[3].equals("?")) {
+                        grid[row][col].setDontKnow(true);
+                    }
+                    if (arrOfCommand[3].equals("!")) {
+                        grid[row][col].setThinkMine(true);
+                    }
+                    if (arrOfCommand[3].equals("#")) {
+                        grid[row][col].setDontKnow(false);
+                        grid[row][col].setThinkMine(false);
+                    }
+                }
+            }catch (Exception e){
+                System.out.println(e);
             }
+
+
+            /*if(commande.charAt(0) == 'q'){
+                return;
+            }
+            int row = (int) commande.charAt(2) - 48;
+            int col = (int) commande.charAt(4) - 48;
+            if (commande.charAt(0) == 'd') {
+                unveil(row, col);
+                if (tour == nbCasesWithoutMines && !lose) {
+                    System.out.println("Vous avez gagné !");
+                    print();
+                }
+            }
+            if(commande.charAt(0) == 'm'){
+                char symbole = commande.charAt(6);
+                if(symbole=='?'){
+                    grid[row][col].setDontKnow(true);
+                }
+                if(symbole=='!'){
+                    grid[row][col].setThinkMine(true);
+                }
+                if(symbole=='#'){
+                    grid[row][col].setDontKnow(false);
+                    grid[row][col].setThinkMine(false);
+                }
+            }*/
         }
     }
 }

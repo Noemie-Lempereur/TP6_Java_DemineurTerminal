@@ -3,6 +3,8 @@ public class Cell {
     private int col;
     private boolean mine;
     private boolean visible;
+    private boolean thinkMine;
+    private boolean dontKnow;
     private int nbTouchingMines;
 
     public Cell(int row, int col) {
@@ -11,6 +13,8 @@ public class Cell {
         mine=false;
         nbTouchingMines=0;
         visible=false;
+        thinkMine=false;
+        dontKnow=false;
     }
 
     public int getRow() {
@@ -43,5 +47,27 @@ public class Cell {
 
     public void setNbTouchingMines(int nbTouchingMines) {
         this.nbTouchingMines = nbTouchingMines;
+    }
+
+    public boolean isThinkMine() {
+        return thinkMine;
+    }
+
+    public boolean isDontKnow() {
+        return dontKnow;
+    }
+
+    public void setThinkMine(boolean thinkMine) {
+        this.thinkMine = thinkMine;
+        if(isThinkMine()) {
+            this.dontKnow = false;
+        }
+    }
+
+    public void setDontKnow(boolean dontKnow) {
+        this.dontKnow = dontKnow;
+        if(isDontKnow()) {
+            this.thinkMine = false;
+        }
     }
 }
